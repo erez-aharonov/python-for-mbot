@@ -1,7 +1,7 @@
 from lib.mBot import *
 bot = mBot()
-#bot.startWithSerial("/dev/ttyUSB0")
-bot.startWithHID()
+bot.startWithSerial("/dev/ttyUSB0")
+# bot.startWithHID()
 while(1):
 	bot.doMove(100,100)
 	sleep(2)
