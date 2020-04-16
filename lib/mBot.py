@@ -255,8 +255,8 @@ class mBot():
 
     def float2bytes(self,fval):
         val = struct.pack("f",fval)
-        return [ord(val[0]),ord(val[1]),ord(val[2]),ord(val[3])]
+        return list(val)
 
     def short2bytes(self,sval):
         val = struct.pack("h",sval)
-        return [ord(val[0]),ord(val[1])]
+        return list(val)

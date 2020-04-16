@@ -2,6 +2,7 @@ import serial
 import pandas as pd
 import struct
 from time import sleep
+from lib.music import tones_table
 
 
 class Robot:
@@ -32,6 +33,19 @@ class Robot:
         package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x1, port])
         value = self._request_sensor_value(extension_id, package)
         return value
+
+    def do_buzzer(self, tone, time=0):
+        buzzer = tones_table[tone]
+        buzzer_as_short = self._short_to_bytes(buzzer)
+        time_as_short = self._short_to_bytes(time)
+        package = bytearray([0xff, 0x55, 0x7, 0x0, 0x2, 0x22] + buzzer_as_short + time_as_short)
+        self._write_package(package)
+
+    def do_move(self, left_speed, right_speed):
+        left_speed_bytes = self._short_to_bytes(-left_speed)
+        right_speed_bytes = self._short_to_bytes(right_speed)
+        package = bytearray([0xff, 0x55, 0x7, 0x0, 0x2, 0x5] + left_speed_bytes + right_speed_bytes)
+        self._write_package(package)
 
     def _request_sensor_value(self, extension_id, package):
         while True:
@@ -101,3 +115,13 @@ class Robot:
         response_index = buffer[message_start_index]
         value = self._convert_buffer_to_number(buffer[message_start_index + 1:])
         return response_index, value
+
+    @staticmethod
+    def _float_to_bytes(value):
+        val = struct.pack("f", value)
+        return list(val)
+
+    @staticmethod
+    def _short_to_bytes(value):
+        val = struct.pack("h", value)
+        return list(val)
