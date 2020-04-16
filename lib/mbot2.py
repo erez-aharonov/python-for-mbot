@@ -17,6 +17,12 @@ class Robot:
                 break
         return value
 
+    def do_rgb_led_on_board(self, index, red, green, blue):
+        self.do_rgb_led(0x7, 0x2, index, red, green, blue)
+
+    def do_rgb_led(self, port, slot, index, red, green, blue):
+        self.write_package(bytearray([0xff, 0x55, 0x9, 0x0, 0x2, 0x8, port, slot, index, red, green, blue]))
+
     def write_package(self, package):
         buf = []
         buf += [0, len(package)]
@@ -31,7 +37,7 @@ class Robot:
         while True:
             count += 1
             waiting_buffer_length = self._robot.inWaiting()
-            if waiting_buffer_length == 0:
+            if waiting_buffer_length <= 4:
                 continue
             buffer = [ord(self._robot.read()) for k in range(waiting_buffer_length)]
             if hex(buffer[0]) == '0xff' and \
@@ -41,11 +47,6 @@ class Robot:
                 return buffer
             else:
                 return None
-            # for k in range(waiting_buffer_length):
-            #     output_byte = ord(self._robot.read())
-            #     buffer.append(output_byte)
-            #     if hex(output_byte) == '0xa' and hex(buffer[-2]) == '0xd':
-            #         break
         return buffer
 
     @staticmethod
