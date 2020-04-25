@@ -77,8 +77,6 @@ class Robot:
         while True:
             count += 1
             waiting_buffer_length = self._robot.inWaiting()
-            # if waiting_buffer_length <= 4:
-            #     continue
             buffer = [ord(self._robot.read()) for _ in range(waiting_buffer_length)]
             buffer_as_hex += list(map(hex, buffer))
             if self._debug:
@@ -86,16 +84,6 @@ class Robot:
             message_as_numbers = self._get_last_long_message(buffer_as_hex)
             if message_as_numbers:
                 return message_as_numbers
-            # all_message_strings = re.findall('0xff-0x55.*?0xd-0xa', "-".join(buffer_as_hex))
-            # messages_list = list(map(lambda x: x.split('-'), all_message_strings))
-            # if self._debug:
-            #     print('messages_list:', messages_list)
-            # for message in messages_list:
-            #     if len(message) > 4:
-            #         message_as_numbers = list(map(lambda x: int(x, 0), message))
-            #         if self._debug:
-            #             print('count:', count)
-            #         return message_as_numbers
             if count > 10000:
                 break
         return None
