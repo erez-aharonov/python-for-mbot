@@ -80,18 +80,9 @@ class Robot:
             for message in messages_list:
                 if len(message) > 4:
                     message_as_numbers = list(map(lambda x: int(x, 0), message))
-                    # break
                     return message_as_numbers
             if count > 1000:
                 break
-            # if hex(buffer[0]) == '0xff' and \
-            #         hex(buffer[1]) == '0x55' and \
-            #         hex(buffer[-1]) == '0xa' and \
-            #         hex(buffer[-2]) == '0xd':
-            #     print('buffer:', list(map(hex, buffer)))
-            #     return buffer
-            # else:
-            #     return None
         return None
 
     @staticmethod
