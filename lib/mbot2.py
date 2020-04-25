@@ -7,30 +7,35 @@ from lib.music import tones_table
 
 
 class Robot:
-    def __init__(self, port="/dev/ttyUSB0", baud_rate=115200):
+    def __init__(self, port="/dev/ttyUSB0", baud_rate=115200, debug=False):
         self._robot = serial.Serial(port, baud_rate)
+        self._debug = debug
         sleep(0.05)
 
-    def request_line_follower(self, extension_id, port):
+    def request_line_follower(self, port):
+        extension_id = 1
         package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x11, port])
         value = self._request_sensor_value(extension_id, package)
         return value
 
-    def do_rgb_led_on_board(self, index, red, green, blue):
+    def do_rgb_led_on_board(self, red, green, blue):
+        index = 2
         self.do_rgb_led(0x7, 0x2, index, red, green, blue)
 
     def do_rgb_led(self, port, slot, index, red, green, blue):
         self._write_package(bytearray([0xff, 0x55, 0x9, 0x0, 0x2, 0x8, port, slot, index, red, green, blue]))
 
-    def request_light_on_board(self, extension_id):
-        return self.request_light(extension_id, 8)
+    def request_light_on_board(self):
+        extension_id = 3
+        return self._request_light(extension_id, 8)
 
-    def request_light(self, extension_id, port):
+    def _request_light(self, extension_id, port):
         package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x3, port])
         value = self._request_sensor_value(extension_id, package)
         return value
 
-    def request_ultrasonic_sensor(self, extension_id, port):
+    def request_ultrasonic_sensor(self, port):
+        extension_id = 4
         package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x1, port])
         value = self._request_sensor_value(extension_id, package)
         return value
@@ -49,7 +54,9 @@ class Robot:
         self._write_package(package)
 
     def _request_sensor_value(self, extension_id, package):
-        while True:
+        count = 0
+        while count < 10:
+            count += 1
             self._write_package(package)
             response_index, value = self._read_message_from_robot()
             if extension_id == response_index:
@@ -65,25 +72,48 @@ class Robot:
         sleep(0.05)
 
     def _read_buffer_from_robot(self):
-        # message_as_numbers = None
         count = 0
+        buffer_as_hex = []
         while True:
             count += 1
             waiting_buffer_length = self._robot.inWaiting()
-            if waiting_buffer_length <= 4:
-                continue
+            # if waiting_buffer_length <= 4:
+            #     continue
             buffer = [ord(self._robot.read()) for _ in range(waiting_buffer_length)]
-            buffer_as_hex = list(map(hex, buffer))
-            print('buffer:', buffer_as_hex)
-            all_message_strings = re.findall('0xff-0x55.*?0xd-0xa', "-".join(buffer_as_hex))
-            messages_list = list(map(lambda x: x.split('-'), all_message_strings))
-            for message in messages_list:
-                if len(message) > 4:
-                    message_as_numbers = list(map(lambda x: int(x, 0), message))
-                    return message_as_numbers
-            if count > 1000:
+            buffer_as_hex += list(map(hex, buffer))
+            if self._debug:
+                print('buffer:', buffer_as_hex)
+            message_as_numbers = self._get_last_long_message(buffer_as_hex)
+            if message_as_numbers:
+                return message_as_numbers
+            # all_message_strings = re.findall('0xff-0x55.*?0xd-0xa', "-".join(buffer_as_hex))
+            # messages_list = list(map(lambda x: x.split('-'), all_message_strings))
+            # if self._debug:
+            #     print('messages_list:', messages_list)
+            # for message in messages_list:
+            #     if len(message) > 4:
+            #         message_as_numbers = list(map(lambda x: int(x, 0), message))
+            #         if self._debug:
+            #             print('count:', count)
+            #         return message_as_numbers
+            if count > 10000:
                 break
         return None
+
+    def _get_last_long_message(self, buffer_as_hex):
+        all_message_strings = re.findall('0xff-0x55.*?0xd-0xa', "-".join(buffer_as_hex))
+        messages_list = list(map(lambda x: x.split('-'), all_message_strings))
+        if self._debug:
+            print('messages_list:', messages_list)
+        df = pd.Series(messages_list).to_frame('message')
+        df['len'] = df['message'].apply(len)
+        relevant = df[df['len'] > 4]
+        if relevant.shape[0]:
+            message = relevant.iloc[-1]['message']
+            message_as_numbers = list(map(lambda x: int(x, 0), message))
+        else:
+            message_as_numbers = None
+        return message_as_numbers
 
     @staticmethod
     def _get_message_index(buffer):
