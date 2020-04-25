@@ -2,6 +2,7 @@ import serial
 import pandas as pd
 import struct
 from time import sleep
+import re
 from lib.music import tones_table
 
 
@@ -64,7 +65,7 @@ class Robot:
         sleep(0.05)
 
     def _read_buffer_from_robot(self):
-        buffer = None
+        # message_as_numbers = None
         count = 0
         while True:
             count += 1
@@ -72,15 +73,26 @@ class Robot:
             if waiting_buffer_length <= 4:
                 continue
             buffer = [ord(self._robot.read()) for _ in range(waiting_buffer_length)]
-            if hex(buffer[0]) == '0xff' and \
-                    hex(buffer[1]) == '0x55' and \
-                    hex(buffer[-1]) == '0xa' and \
-                    hex(buffer[-2]) == '0xd':
-                print('buffer:', list(map(hex, buffer)))
-                return buffer
-            else:
-                return None
-        return buffer
+            buffer_as_hex = list(map(hex, buffer))
+            print('buffer:', buffer_as_hex)
+            all_message_strings = re.findall('0xff-0x55.*?0xd-0xa', "-".join(buffer_as_hex))
+            messages_list = list(map(lambda x: x.split('-'), all_message_strings))
+            for message in messages_list:
+                if len(message) > 4:
+                    message_as_numbers = list(map(lambda x: int(x, 0), message))
+                    # break
+                    return message_as_numbers
+            if count > 1000:
+                break
+            # if hex(buffer[0]) == '0xff' and \
+            #         hex(buffer[1]) == '0x55' and \
+            #         hex(buffer[-1]) == '0xa' and \
+            #         hex(buffer[-2]) == '0xd':
+            #     print('buffer:', list(map(hex, buffer)))
+            #     return buffer
+            # else:
+            #     return None
+        return None
 
     @staticmethod
     def _get_message_index(buffer):
