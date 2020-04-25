@@ -1,8 +1,10 @@
 import serial
 import pandas as pd
 import struct
+import sys
 from time import sleep
 import re
+import traceback
 from lib.music import tones_table
 
 
@@ -72,20 +74,25 @@ class Robot:
         sleep(0.05)
 
     def _read_buffer_from_robot(self):
-        count = 0
-        buffer_as_hex = []
-        while True:
-            count += 1
-            waiting_buffer_length = self._robot.inWaiting()
-            buffer = [ord(self._robot.read()) for _ in range(waiting_buffer_length)]
-            buffer_as_hex += list(map(hex, buffer))
-            if self._debug:
-                print('buffer:', buffer_as_hex)
-            message_as_numbers = self._get_last_long_message(buffer_as_hex)
-            if message_as_numbers:
-                return message_as_numbers
-            if count > 10000:
-                break
+        try:
+            count = 0
+            buffer_as_hex = []
+            while True:
+                count += 1
+                waiting_buffer_length = self._robot.inWaiting()
+                buffer = [ord(self._robot.read()) for _ in range(waiting_buffer_length)]
+                buffer_as_hex += list(map(hex, buffer))
+                if self._debug:
+                    print('buffer:', buffer_as_hex)
+                message_as_numbers = self._get_last_long_message(buffer_as_hex)
+                if message_as_numbers:
+                    return message_as_numbers
+                if count > 10000:
+                    break
+        except KeyError:
+            traceback.print_exc(file=sys.stdout)
+            print('buffer:', buffer_as_hex)
+            self._robot.do_move(0, 0)
         return None
 
     def _get_last_long_message(self, buffer_as_hex):
@@ -120,12 +127,19 @@ class Robot:
         return struct.unpack('<h', struct.pack('2B', *buffer[:2]))[0]
 
     def _convert_buffer_to_number(self, buffer):
-        number_type_index = buffer[0]
-        convert_dict = {
-            2: self._convert_buffer_to_float,
-            3: self._convert_buffer_to_short}
-        # noinspection PyArgumentList
-        number = convert_dict[number_type_index](buffer[1:])
+        number = None
+        try:
+            number_type_index = buffer[0]
+            convert_dict = {
+                2: self._convert_buffer_to_float,
+                3: self._convert_buffer_to_short}
+            # noinspection PyArgumentList
+            number = convert_dict[number_type_index](buffer[1:])
+        except KeyError:
+            traceback.print_exc(file=sys.stdout)
+            buffer_as_hex += list(map(hex, buffer))
+            print('buffer:', buffer_as_hex)
+            self._robot.do_move(0, 0)
         return number
 
     def _read_message_from_robot(self):
