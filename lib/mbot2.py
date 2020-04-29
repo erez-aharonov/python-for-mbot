@@ -6,6 +6,7 @@ from time import sleep
 import re
 import traceback
 from lib.music import tones_table
+from time import sleep
 
 
 class Robot:
@@ -18,6 +19,14 @@ class Robot:
         extension_id = 1
         package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x11, port])
         value = self._request_sensor_value(extension_id, package)
+        return value
+
+    def request_sound_sensor(self, port):
+        sleep(0.01)
+        extension_id = 1
+        package = bytearray([0xff, 0x55, 0x4, extension_id, 0x1, 0x7, port])
+        value = self._request_sensor_value(extension_id, package)
+        sleep(0.01)
         return value
 
     def do_rgb_led_on_board(self, red, green, blue):
@@ -134,6 +143,9 @@ class Robot:
                 2: self._convert_buffer_to_float,
                 3: self._convert_buffer_to_short}
             # noinspection PyArgumentList
+            if number_type_index not in convert_dict.keys():
+                print(f'{number_type_index} not in convert_dict {convert_dict}')
+                return None
             number = convert_dict[number_type_index](buffer[1:])
         except KeyError:
             traceback.print_exc(file=sys.stdout)
